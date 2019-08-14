@@ -1,0 +1,81 @@
+name: brew build-bottle-pr on merges
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  bottle_prs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Git repository
+        uses: actions/checkout@master
+
+      - name: Set up Homebrew
+        run: |
+          HOMEBREW_REPOSITORY="$HOME/Homebrew"
+          export PATH="$HOMEBREW_REPOSITORY/bin:$PATH"
+          rm -rf $HOMEBREW_REPOSITORY
+          git clone --depth=1 https://github.com/Homebrew/brew "$HOMEBREW_REPOSITORY"
+          HOMEBREW_CORE_TAP_DIR="$HOMEBREW_REPOSITORY/Library/Taps/homebrew/homebrew-core"
+          mkdir -p "$HOMEBREW_CORE_TAP_DIR"
+          rm -rf "$HOMEBREW_CORE_TAP_DIR"
+          git clone https://github.com/Homebrew/linuxbrew-core "$HOMEBREW_CORE_TAP_DIR"
+          export HOMEBREW_GITHUB_USER=linuxbrewtestbot
+          export HOMEBREW_DEVELOPER=1
+          export HOMEBREW_NO_AUTO_UPDATE=1
+          export HOMEBREW_NO_ANALYTICS=1
+          brew help # trigger vendored ruby installation
+
+      - name: Configure git user
+        run: |
+          git config --global user.name "LinuxbrewTestBot"
+          git config --global user.email "testbot@linuxbrew.sh"
+
+      - name: Set up SSH key
+        env:
+          ISSYL0_BOT_SSH_KEY: {{ secrets.ISSYL0_BOT_SSH_KEY }}
+        run: |
+          mkdir ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$LINUXBREWTESTBOT_SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          git config --global core.sshCommand "ssh -i ~/.ssh/id_rsa -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no"
+
+      - name: Set up credentials for `hub`
+        env:
+          LINUXBREWTESTBOT_GITHUB_TOKEN: {{ secrets.LINUXBREWTESTBOT_GITHUB_TOKEN }}
+        run: |
+          cat <<EOF > ~/.config/hub
+          github.com:
+          - user: linuxbrewtestbot
+            oath_token: $LINUXBREWTESTBOT_GITHUB_TOKEN
+            protocol: https
+          EOF
+
+      - name: brew install hub
+        run: |
+          brew update
+          brew install hub
+
+      - name: Set up linuxbrew/developer tap
+        run: |
+          brew tap linuxbrew/developer
+
+      - name: Add issyl0 remote
+        run: |
+          cd $(brew --repo homebrew/core)
+          git remote add linuxbrewtestbot git@github.com:linuxbrewtestbot/linuxbrew-core.git
+          git fetch -p linuxbrewtestbot
+
+      - name: Run build-bottle-pr
+        run: |
+          if brew find-formulae-to-bottle > /dev/null; then
+            for i in $(brew find-formulae-to-bottle); do
+              brew build-bottle-pr $i
+            done
+          else
+            echo "Either there were no conflicts, HEAD is not a merge commit, or something else went wrong. Aborting."
+            exit 1
+          fi
