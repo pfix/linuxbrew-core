@@ -35,7 +35,7 @@ jobs:
 
       - name: Set up SSH key
         env:
-          ISSYL0_BOT_SSH_KEY: {{ secrets.ISSYL0_BOT_SSH_KEY }}
+          LINUXBREWTESTBOT_SSH_KEY: {{ secrets.LINUXBREWTESTBOT_SSH_KEY }}
         run: |
           mkdir ~/.ssh
           chmod 700 ~/.ssh
