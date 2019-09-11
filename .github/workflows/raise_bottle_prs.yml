@@ -63,14 +63,10 @@ jobs:
         run: |
           brew tap linuxbrew/developer
 
-      - name: Add issyl0 remote
-        run: |
-          cd $(brew --repo homebrew/core)
-          git remote add linuxbrewtestbot git@github.com:linuxbrewtestbot/linuxbrew-core.git
-          git fetch -p linuxbrewtestbot
-
       - name: Run build-bottle-pr
         run: |
+          cd $(brew --repo homebrew/core)
+
           if brew find-formulae-to-bottle > /dev/null; then
             for i in $(brew find-formulae-to-bottle); do
               brew build-bottle-pr $i
