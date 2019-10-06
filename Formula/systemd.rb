@@ -39,7 +39,7 @@ class Systemd < Formula
     ENV.prepend_create_path "PERL5LIB", libexec/"lib/perl5"
 
     # Needed by intltool (xml::parser)
-    ENV.prepend_path "PERL5LIB", "#{Formula["intltool"].libexec}/lib/perl5"
+    ENV.prepend_path "INTLTOOL_PERL", "#{Formula["perl"].bin}/perl"
 
     # Fix error: unsupported reloc 42
     inreplace "configure.ac", "-Wl,-fuse-ld=gold", ""
